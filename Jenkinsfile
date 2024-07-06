@@ -1,18 +1,27 @@
 pipeline {
     agent any
+
     stages {
+
+
         stage('Lint HTML') {
             steps {
-                sh 'tidy -q -e index.html'
+                script {
+                    docker.image('validator/validator').inside {
+                        sh 'vnu-runtime-image myfile.html'
+                    }
+                }
             }
         }
-        stage('Upload to AWS') {
+
+        stage('Upload to S3') {
             steps {
-		withAWS(region:'us-east-2',credentials:'aws-static') {
-		    sh 'echo "Hello World with AWS creds"'
-		    s3Upload(pathStyleAccessEnabled: true, payloadSigningEnabled: true, file: index.html, bucket:'irfan-static-jenkins-pipeline')
-		}
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'your-credentials-id', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh '''
+                    aws s3 cp myfile.html s3://your-bucket/
+                    '''
+                }
             }
         }
-      }
     }
+}
